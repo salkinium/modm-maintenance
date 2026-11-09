@@ -8,9 +8,14 @@ Checks every modm-ext/*-partial submodule of a modm checkout:
 Usage: check_partials.py <modm checkout>
 Writes report.md and appends `flagged=` and `changed=` to $GITHUB_OUTPUT.
 """
-import configparser, datetime, json, os, subprocess, sys
+import configparser, datetime, json, os, re, subprocess, sys
 
 STALE_DAYS = 9  # Update jobs run weekly
+NO_SOURCE = re.compile(r"(update\.py|partial\.py|README\.md|\.gitignore|\.github/)")
+# Partials without an Update workflow on purpose
+MANUAL = {
+    "modm-ext/vl53-partial": "the ST zips are behind the myST login",
+}
 
 
 def gh(*args):
@@ -36,7 +41,9 @@ def check(repo, sha):
     problems, notes = [], []
     runs = gh(f"repos/{repo}/actions/runs?per_page=1&branch=main")
     run = runs["workflow_runs"][0] if runs and runs["workflow_runs"] else None
-    if not run:
+    if repo in MANUAL:
+        notes.append(f"updated by hand: {MANUAL[repo]}")
+    elif not run:
         problems.append("no workflow runs at all")
     else:
         age = datetime.datetime.now(datetime.timezone.utc) - datetime.datetime.fromisoformat(run["created_at"])
@@ -49,7 +56,10 @@ def check(repo, sha):
     if cmp is None:
         problems.append(f"cannot compare pinned {sha[:8]} with main")
         return problems, notes, 0
-    files = cmp.get("files", [])
+    # changes of the update scripts and CI only are not bumped in modm (see bump.sh)
+    files = [f for f in cmp.get("files", []) if not NO_SOURCE.match(f["filename"])]
+    if not files:
+        return problems, notes, 0
     removed = [f["filename"] for f in files if f["status"] == "removed"]
     renamed = [f"{f['previous_filename']} -> {f['filename']}" for f in files if f["status"] == "renamed"]
     adds = sum(f["additions"] for f in files)
