@@ -105,7 +105,7 @@ jobs:
           echo "image_cortex=$(grep -om1 'ghcr.io/modm-ext/modm-build-cortex-m:[0-9-]*' .github/workflows/linux.yml)" >> "$GITHUB_OUTPUT"
           echo "image_avr=$(grep -om1 'ghcr.io/modm-ext/modm-build-avr:[0-9-]*' .github/workflows/linux.yml)" >> "$GITHUB_OUTPUT"
 
-  # Same as hal-compile-quick and hal-compile-quick-avr in modm's linux.yml
+  # Same as hal-compile-quick(-avr) and (avr|cortex-m)-examples in modm's linux.yml
   compile:
     needs: bump
     if: needs.bump.outputs.branch != ''
@@ -126,6 +126,10 @@ jobs:
           git config --global --add safe.directory '*'
           pip3 install --upgrade --upgrade-strategy=eager --break-system-packages modm
           cd test/all && python3 run_all.py stm32 sam rp nrf --quick --split 7 --part ${{ matrix.part }}
+      # the ext modules are mostly used by examples only (nanopb, lvgl, tinyusb, ...)
+      - if: always()
+        run: |
+          cd examples && ../tools/scripts/examples_compile.py . ../test/integration --target '^(stm32|sam|rp|nrf)' --split 7 --part ${{ matrix.part }}
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -148,6 +152,9 @@ jobs:
           git config --global --add safe.directory '*'
           pip3 install --upgrade --upgrade-strategy=eager --break-system-packages modm
           cd test/all && python3 run_all.py at --quick
+      - if: always()
+        run: |
+          cd examples && ../tools/scripts/examples_compile.py . ../test/integration --target '^at'
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -189,7 +196,7 @@ jobs:
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(.maintenance/scripts/compile.sh:*),Bash(ls:*),Bash(grep:*)"
           prompt: |
             This is modm with its ext/ partial submodules bumped to their latest version (HEAD commit).
-            The quick HAL compile (test/all/run_all.py --quick) failed afterwards; logs are in .logs/.
+            The quick HAL compile (test/all/run_all.py --quick) or the examples compile (tools/scripts/examples_compile.py) failed afterwards; logs are in .logs/.
             Fix modm so it compiles again with the new submodule versions. Change only modm's own
             files (module.lb/module.md/.cpp.in/.hpp.in etc. under ext/ and src/), never the
             submodule contents. Verify with `.maintenance/scripts/compile.sh <targets>`, for example
