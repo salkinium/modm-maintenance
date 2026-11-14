@@ -51,9 +51,9 @@ jobs:
             --model claude-sonnet-5-5 --max-turns 40
             --allowedTools "Read,Write,Bash(gh api:*),Bash(gh run view:*),Bash(gh run list:*)"
           prompt: |
-            report.md lists the modm-ext/*-partial repositories that modm-io/modm uses as submodules.
-            Each partial repo copies a subset of an upstream project with a weekly Update workflow
-            (.github/workflows/update.yml, using modm-ext/partial's partial.py with glob patterns).
+            report.md lists the modm-ext/* and modm-io/* repositories that modm-io/modm uses as submodules.
+            Most are modm-ext/*-partial repos that copy a subset of an upstream project with a weekly
+            Update workflow (.github/workflows/update.yml, using modm-ext/partial's partial.py with glob patterns).
             ❌ entries have problems, 🔄 entries have new commits since the commit modm pins.
 
             For every ❌ and 🔄 repo, use `gh api` and `gh run view --log-failed` to find out:
